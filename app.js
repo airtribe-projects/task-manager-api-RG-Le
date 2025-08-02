@@ -7,6 +7,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const fs = require('fs');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const tasksFile = path.join(__dirname, 'task.json');
 
@@ -30,7 +31,7 @@ const writeTasks = (data) => {
 // Get all tasks
 app.get('/tasks', (req, res) => {
     // Get query parameters
-    const query = req.query;;
+    const query = req.query;
     console.log('GET /tasks: Sending all task with query:', query);
     const data = readTasks();
     
@@ -84,9 +85,11 @@ app.post('/tasks', (req, res) => {
     }
     
     // Create new task
+    // Generate a unique ID for the new task using UUID
     const data = readTasks();
+    const newId = uuidv4();
     const newTask = {
-        id: data.tasks.length + 1,
+        id: newId,
         title,
         description,
         completed,
@@ -106,7 +109,7 @@ app.put('/tasks/:id', (req, res) => {
     console.log('PUT /tasks/:id: Updating task with id:', req.params.id);
     const taskId = parseInt(req.params.id);
     // Get task data from request body
-    const { title, description, completed , priority = 'Not Assigned'} = req.body;
+    const { title, description, completed , priority = 'low'} = req.body;
     
     // Check if task data is valid
     if (!title || !description || typeof completed !== 'boolean') {
@@ -128,7 +131,7 @@ app.put('/tasks/:id', (req, res) => {
         title,
         description,
         completed,
-        priority: data.tasks[taskIndex].priority || priority
+        priority: priority
     };
     data.tasks[taskIndex] = updatedTask;
     writeTasks(data);
@@ -143,6 +146,12 @@ app.delete('/tasks/:id', (req, res) => {
     // Get task id from request parameters
     console.log('DELETE /tasks/:id: Deleting task with id:', req.params.id);
     const taskId = parseInt(req.params.id);
+    
+    // Validate that taskId is a valid number
+    if (isNaN(taskId) || typeof taskId !== 'number') {
+        return res.status(400).json({ error: 'Invalid task id' });
+    }
+    
     // Get task index
     const data = readTasks();
     const taskIndex = data.tasks.findIndex(task => task.id === taskId);
